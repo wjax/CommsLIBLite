@@ -8,6 +8,7 @@
     <PackageReference Include="MessagePack" Version="1.8.74" />
     <PackageReference Include="NLog" Version="4.6.8" />
     <PackageReference Include="protobuf-net" Version="2.4.4" />
+    <PackageReference Include="System.Text.Json" Version="4.6.0" />
   </ItemGroup>
 
 </Project>
