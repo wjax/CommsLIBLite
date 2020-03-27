@@ -50,7 +50,8 @@ namespace CommsLIBLite.Communications
         private byte[] txBuffer = new byte[65536];
 
         private Timer dataRateTimer;
-        private int bytesAccumulator = 0;
+        private int bytesAccumulatorRX = 0;
+        private int bytesAccumulatorTX = 0;
         #endregion
 
         public UDPNETCommunicator(FrameWrapperBase<T> _frameWrapper = null, bool circular = false) : base()
@@ -72,6 +73,7 @@ namespace CommsLIBLite.Communications
             MINIMUM_SEND_GAP = _sendGap;
             RECEIVE_TIMEOUT = inactivityMS;
             frameWrapper?.SetID(ID);
+            State = STATE.STOP;
 
             CommsUri = uri ?? CommsUri;
             SetIPChunks(CommsUri.IP);
@@ -91,13 +93,16 @@ namespace CommsLIBLite.Communications
             messageQueu.Put(serializedObject, length);
         }
 
-        public override void SendSync(byte[] bytes, int offset, int length)
+        public override bool SendSync(byte[] bytes, int offset, int length)
         {
-            Send2Equipment(bytes, offset, length, udpEq);
+            return Send2Equipment(bytes, offset, length, udpEq);
         }
 
         public override void Start()
         {
+            if (State == STATE.RUNNING)
+                return;
+
             logger.Info("Start");
             exit = false;
 
@@ -120,7 +125,7 @@ namespace CommsLIBLite.Communications
             dataRateTimer.Dispose();
 
             messageQueu.Reset();
-            udpEq.ClientImpl.Dispose();
+            udpEq.ClientImpl?.Dispose();
 
             await senderTask;
             await receiverTask;
@@ -144,7 +149,8 @@ namespace CommsLIBLite.Communications
                 return;
 
             logger.Info("ClientDown - " + udpEq.ID);
-            bytesAccumulator = 0;
+            bytesAccumulatorRX = 0;
+            bytesAccumulatorTX = 0;
 
             try
             {
@@ -171,7 +177,8 @@ namespace CommsLIBLite.Communications
             if (!udpEq.Connected)
             {
                 udpEq.Connected = true;
-                bytesAccumulator = 0;
+                bytesAccumulatorRX = 0;
+                bytesAccumulatorTX = 0;
                 // Launch Event
                 FireConnectionEvent(udpEq.ID, udpEq.ConnUri, true);
             }
@@ -180,16 +187,24 @@ namespace CommsLIBLite.Communications
         private void DoSendStart()
         {
             long toWait = 0;
+            LastTX = TimeTools.GetCoarseMillisNow();
+
             while (!exit)
             {
                 try
                 {
                     int read = messageQueu.Take(ref txBuffer, 0);
 
-                    if ((toWait = TimeTools.GetCoarseMillisNow() - LastTX) < MINIMUM_SEND_GAP)
+                    long now = TimeTools.GetCoarseMillisNow();
+                    if (now - LastTX < MINIMUM_SEND_GAP)
+                    {
+                        toWait = MINIMUM_SEND_GAP - (now - LastTX);
                         Thread.Sleep((int)toWait);
+                    }
 
                     Send2Equipment(txBuffer, 0, read, udpEq);
+
+                    LastTX = TimeTools.GetCoarseMillisNow();
                 }
                 catch (Exception e)
                 {
@@ -200,10 +215,10 @@ namespace CommsLIBLite.Communications
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        private void Send2Equipment(byte[] data, int offset, int length, CommEquipmentObject<UdpClient> o)
+        private bool Send2Equipment(byte[] data, int offset, int length, CommEquipmentObject<UdpClient> o)
         {
             if (o == null || o.ClientImpl == null)
-                return;
+                return false;
 
             string ID = o.ID;
             int nSent = 0;
@@ -211,6 +226,8 @@ namespace CommsLIBLite.Communications
             try
             {
                 nSent = t.Client.SendTo(data, offset, length, SocketFlags.None, remoteEP);
+
+                bytesAccumulatorTX += nSent;
                 LastTX = TimeTools.GetCoarseMillisNow();
             }
             catch (Exception e)
@@ -218,7 +235,11 @@ namespace CommsLIBLite.Communications
                 logger.Error(e, "Error while sending UDPNet");
                 // Client Down
                 ClientDown();
+
+                return false;
             }
+
+            return true;
         }
 
         private void Connect2EquipmentCallback()
@@ -248,11 +269,16 @@ namespace CommsLIBLite.Communications
                             udpEq.ClientImpl = t;
                             try
                             {
+                                if (RECEIVE_TIMEOUT == 0)
+                                    ClientUp(t);
+
                                 // Make first reception with RecveiveFrom. Just first to avoid allocations for IPEndPoint
                                 if ((rx = udpEq.ClientImpl.Client.ReceiveFrom(rxBuffer, ref remoteEPSource)) > 0)
                                 {
                                     // Launch event and Add to Dictionary of valid connections
                                     ClientUp(t);
+                                    // Update Accumulator
+                                    bytesAccumulatorRX += rx;
                                     // Update RX Time
                                     udpEq.timeLastIncoming = TimeTools.GetCoarseMillisNow();
 
@@ -264,7 +290,7 @@ namespace CommsLIBLite.Communications
                                                         0,
                                                         rx,
                                                         udpEq.ID,
-                                                        ipChunks);
+                                                        IpChunks);
 
                                     // Feed to FrameWrapper
                                     frameWrapper?.AddBytes(rxBuffer, rx);
@@ -273,7 +299,7 @@ namespace CommsLIBLite.Communications
                                 while ((rx = udpEq.ClientImpl.Client.Receive(rxBuffer)) > 0)
                                 {
                                     // Update Accumulator
-                                    bytesAccumulator += rx;
+                                    bytesAccumulatorRX += rx;
 
                                     // Update RX Time
                                     udpEq.timeLastIncoming = TimeTools.GetCoarseMillisNow();
@@ -286,7 +312,7 @@ namespace CommsLIBLite.Communications
                                                         0,
                                                         rx,
                                                         udpEq.ID,
-                                                        ipChunks);
+                                                        IpChunks);
 
                                     // Feed to FrameWrapper
                                     frameWrapper?.AddBytes(rxBuffer, rx);
@@ -316,9 +342,12 @@ namespace CommsLIBLite.Communications
 
         private void OnDataRate(object state)
         {
-            float dataRateMpbs = (bytesAccumulator * 8f) / 1048576; // Mpbs
-            bytesAccumulator = 0;
-            FireDataRateEvent(ID, dataRateMpbs);
+            float dataRateMpbsRX = (bytesAccumulatorRX * 8f) / 1048576; // Mpbs
+            float dataRateMpbsTX = (bytesAccumulatorTX * 8f) / 1048576; // Mpbs
+            bytesAccumulatorRX = 0;
+            bytesAccumulatorTX = 0;
+
+            FireDataRateEvent(ID, dataRateMpbsRX, dataRateMpbsTX);
         }
 
         private bool IsMulticast(string ip, out IPAddress adr)
