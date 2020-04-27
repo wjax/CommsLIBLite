@@ -7,9 +7,30 @@ namespace CommsLIBLite.Communications
 {
     public static class CommunicatorFactory
     {
-        public static CommunicatorBase<T> CreateCommunicator<T>(ConnUri uri, FrameWrapperBase<T> frameWrapper, bool circular = false)
+        public static ICommunicator CreateCommunicator<T>(ConnUri uri, FrameWrapperBase<T> frameWrapper, bool circular = false)
         {
-            CommunicatorBase<T> c = null ;
+            ICommunicator c = null ;
+            switch (uri.UriType)
+            {
+                case ConnUri.TYPE.TCP:
+                    c = new TCPNETCommunicator<T>(frameWrapper, circular);
+                    break;
+                case ConnUri.TYPE.UDP:
+                    c = new UDPNETCommunicator<T>(frameWrapper, circular);
+                    break;
+            }
+
+            return c;
+        }
+
+        public static ICommunicator CreateCommunicator<T>(string uriString, FrameWrapperBase<T> frameWrapper, bool circular = false)
+        {
+            ICommunicator c = null;
+            var uri = new ConnUri(uriString);
+
+            if (!uri.IsValid)
+                return null;
+
             switch (uri.UriType)
             {
                 case ConnUri.TYPE.TCP:
@@ -27,12 +48,7 @@ namespace CommsLIBLite.Communications
     public abstract class CommunicatorBase<T> : ICommunicator
     {
         public event DataReadyEventHandler DataReadyEvent;
-        //public delegate void DataReadyEventHandler(string ip, int port, long time, byte[] bytes, int offset, int length , string ID, ushort[] ipChunks);
-
-        //public delegate void ConnectionStateDelegate(string ID, ConnUri uri, bool connected);
         public event ConnectionStateDelegate ConnectionStateEvent;
-
-        //public delegate void DataRateDelegate(string ID, float Mbps);
         public event DataRateDelegate DataRateEvent;
 
         public enum STATE

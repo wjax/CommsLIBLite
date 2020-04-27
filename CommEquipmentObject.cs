@@ -6,7 +6,7 @@ using System;
 
 namespace CommsLIBLite.Communications
 {
-    public sealed class CommEquipmentObject<T>
+    internal sealed class CommEquipmentObject<T>
     {
         public T ClientImpl;
         public ConnUri ConnUri;

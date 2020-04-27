@@ -5,6 +5,13 @@
     // udp://:PORT:LOCAL_PORT
     // serial://com1:9600
     // sdp://yua_Live.sdp::50100
+
+    /// <summary>
+    /// Class used to parse uri strings and provide data to ICommunicators.
+    /// URI types can be tcp and udp <br/>
+    /// TCP: tcp://IP:PORT <br/>
+    /// UDP: udp://[IP]:PORT:[BIND_IP]:[BIND_PORT]
+    /// </summary>
     public class ConnUri
     {
         public enum TYPE
@@ -25,6 +32,17 @@
         }
 
         private string _uriPath;
+        /// <summary>
+        /// Uri string.
+        /// URI types can be TCP and UDP <br/>
+        /// tcp://IP:PORT <br/>
+        /// udp://[IP]:PORT:[BIND_IP]:[BIND_PORT] <br/><br/>
+        /// Example:
+        /// <code>
+        /// var connUri = new ConnUri("tcp://127.0.0.1:9001");
+        /// </code>
+        /// </summary>
+
         public string UriPath
         {
             get => _uriPath;
@@ -166,6 +184,10 @@
             get => _path;
         }
 
+        /// <summary>
+        /// Construct a ConnUri object from a valid string. Always check IsValid
+        /// </summary>
+        /// <param name="uriString">Uri string must be valid acording to: <see cref="UriPath"/> </param>
         public ConnUri(string uriString)
         {
             UriPath = uriString;

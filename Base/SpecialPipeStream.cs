@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CommsLIBLite.Base
 {
-    public class SpecialPipeStream : Stream, IDisposable
+    internal class SpecialPipeStream : Stream, IDisposable
     {
         CircularByteBuffer internalBuffer;
 

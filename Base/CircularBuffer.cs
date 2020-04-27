@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CommsLIBLite.Base
 {
-    public class CircularBuffer<T> : IEnumerable<T>
+    internal sealed class CircularBuffer<T> : IEnumerable<T>
     {
         int _size;
         T[] _values = null;
