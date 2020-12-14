@@ -20,7 +20,7 @@ namespace CommsLIBLite.Communications.FrameWrappers.ProtoBuf
         T message;
 
 
-        public ProtoBuffFrameWrapper(PrefixStyle prefixStyle) : base(false)
+        public ProtoBuffFrameWrapper(PrefixStyle prefixStyle = PrefixStyle.Base128) : base(false)
         {
             pipeStreamReader = new SpecialPipeStream(65536, false);
             memoryStreamTX = new MemoryStream(8192);
@@ -31,16 +31,12 @@ namespace CommsLIBLite.Communications.FrameWrappers.ProtoBuf
         {
             pipeStreamReader.Write(bytes, 0, length);
 
-            try
+            // Will raise exception if there is a problem with deserialization
+            while ((message = Serializer.DeserializeWithLengthPrefix<T>(pipeStreamReader, _prefixStyle)) != null)
             {
-                while ((message = Serializer.DeserializeWithLengthPrefix<T>(pipeStreamReader, _prefixStyle)) != null)
-                {
-                    FireEvent(message);
-                }
+                FireEvent(message);
             }
-            catch (Exception ee) 
-            {
-            }
+            
         }
 
         public override byte[] Data2BytesSync(T data, out int count)

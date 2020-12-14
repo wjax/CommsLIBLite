@@ -62,7 +62,7 @@ namespace CommsLIBLite.Communications.FrameWrappers
         /// </summary>
         public abstract void Stop();
 
-        internal void FireEvent(T toFire)
+        protected void FireEvent(T toFire)
         {
             if (useThreadPool4Event)
                 fireQueue.Enqueue(toFire);
