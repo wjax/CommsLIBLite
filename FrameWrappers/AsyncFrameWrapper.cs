@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 
 namespace CommsLIBLite.Communications.FrameWrappers
 {
+    /// <summary>
+    /// Child class of FrameWrapperBase used to create other FrameWrappers that use a Async AddBytes. When ICommunicator call AddBytes, data is copied internally and processed in another thread.
+    /// </summary>
+    /// <typeparam name="T">Data type to serialize To and From. It can be a base class from where others inherit</typeparam>
     public abstract class AsyncFrameWrapper<T> : FrameWrapperBase<T>
     {
         private int CAPACITY = 65536;

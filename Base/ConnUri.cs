@@ -26,6 +26,9 @@
         public TYPE UriType;
         
         private bool isValid;
+        /// <summary>
+        /// Indicates if this Uri object contains valid information
+        /// </summary>
         public bool IsValid
         {
             get => isValid;
@@ -42,7 +45,6 @@
         /// var connUri = new ConnUri("tcp://127.0.0.1:9001");
         /// </code>
         /// </summary>
-
         public string UriPath
         {
             get => _uriPath;

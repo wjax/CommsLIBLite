@@ -7,6 +7,10 @@ using System.Text.Json.Serialization;
 
 namespace CommsLIBLite.FrameWrappers.JSON
 {
+    /// <summary>
+    /// Json builtin serializer using SyncFrameWrapper as base class
+    /// </summary>
+    /// <typeparam name="T">Data type to serialize To and From. It can be a base class from where others inherit</typeparam>
     public class JsonFrameWrapper<T> : SyncFrameWrapper<T>
     {
         public JsonFrameWrapper() : base(false)

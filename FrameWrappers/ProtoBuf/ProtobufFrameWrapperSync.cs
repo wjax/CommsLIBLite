@@ -8,32 +8,45 @@ using System.Text;
 
 namespace CommsLIBLite.Communications.FrameWrappers.ProtoBuf
 {
+    /// <summary>
+    /// Protobuf-net builtin serializer using SyncFrameWrapper as base and PrefixStyle.Base128
+    /// </summary>
+    /// <typeparam name="T">Data type to serialize To and From. It can be a base class from where others inherit</typeparam>
     public class ProtoBuffFrameWrapper<T> : SyncFrameWrapper<T>, IDisposable
     {
         private SpecialPipeStream pipeStreamReader;
         private MemoryStream memoryStreamTX;
+        private PrefixStyle _prefixStyle = PrefixStyle.Base128;
         T message;
 
-        public ProtoBuffFrameWrapper() : base(false)
+
+        public ProtoBuffFrameWrapper(PrefixStyle prefixStyle) : base(false)
         {
             pipeStreamReader = new SpecialPipeStream(65536, false);
             memoryStreamTX = new MemoryStream(8192);
+            _prefixStyle = prefixStyle;
         }
 
         public override void AddBytes(byte[] bytes, int length)
         {
             pipeStreamReader.Write(bytes, 0, length);
 
-            while ((message = Serializer.DeserializeWithLengthPrefix<T>(pipeStreamReader, PrefixStyle.Base128)) != null)
+            try
             {
-                FireEvent(message);
+                while ((message = Serializer.DeserializeWithLengthPrefix<T>(pipeStreamReader, _prefixStyle)) != null)
+                {
+                    FireEvent(message);
+                }
+            }
+            catch (Exception ee) 
+            {
             }
         }
 
         public override byte[] Data2BytesSync(T data, out int count)
         {
             memoryStreamTX.Seek(0, SeekOrigin.Begin);
-            Serializer.SerializeWithLengthPrefix(memoryStreamTX, data, PrefixStyle.Base128);
+            Serializer.SerializeWithLengthPrefix(memoryStreamTX, data, _prefixStyle);
             count = (int)memoryStreamTX.Position;
 
             return memoryStreamTX.GetBuffer();

@@ -5,8 +5,19 @@ using System.Threading.Tasks;
 
 namespace CommsLIBLite.Communications
 {
+    /// <summary>
+    /// Factory to create ICommunicator based on Uri
+    /// </summary>
     public static class CommunicatorFactory
     {
+        /// <summary>
+        /// Creates an ICommunicator
+        /// </summary>
+        /// <typeparam name="T">Base data type used by the serialilzer/framewrapper. If not using serializer, put object</typeparam>
+        /// <param name="uri">ConnUri defining the connection</param>
+        /// <param name="frameWrapper">Serializer/Framewrapper that will be used. It can be null if not used</param>
+        /// <param name="circular">Use internal CircularBuffer if you do not own the byte array passed to SendASync and do not have control over its lifespan. It is not used in SendSync</param>
+        /// <returns>Created ICommunicator. It still needs to be initialized and started</returns>
         public static ICommunicator CreateCommunicator<T>(ConnUri uri, FrameWrapperBase<T> frameWrapper, bool circular = false)
         {
             ICommunicator c = null ;
@@ -23,6 +34,14 @@ namespace CommsLIBLite.Communications
             return c;
         }
 
+        /// <summary>
+        /// Creates an ICommunicator
+        /// </summary>
+        /// <typeparam name="T">Base data type used by the serialilzer/framewrapper. If not using serializer, put object</typeparam>
+        /// <param name="uri">string uri defining the connection</param>
+        /// <param name="frameWrapper">Serializer/Framewrapper that will be used. It can be null if not used</param>
+        /// <param name="circular">Use internal CircularBuffer if you do not own the byte array passed to SendASync and do not have control over its lifespan. It is not used in SendSync</param>
+        /// <returns>Created ICommunicator. It still needs to be initialized and started</returns>
         public static ICommunicator CreateCommunicator<T>(string uriString, FrameWrapperBase<T> frameWrapper, bool circular = false)
         {
             ICommunicator c = null;
@@ -45,6 +64,10 @@ namespace CommsLIBLite.Communications
         }
     }
 
+    /// <summary>
+    /// Base class for TCP and UDP Communicators
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public abstract class CommunicatorBase<T> : ICommunicator
     {
         public event DataReadyEventHandler DataReadyEvent;

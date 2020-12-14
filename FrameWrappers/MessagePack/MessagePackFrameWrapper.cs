@@ -9,6 +9,10 @@ using System.Threading.Tasks;
 
 namespace CommsLIBLite.Communications.FrameWrappers.MessagePack
 {
+    /// <summary>
+    /// MessagePack builtin Serializer using Typeless mode and SyncFrameWrapper as base
+    /// </summary>
+    /// <typeparam name="T">Data type to serialize To and From. It can be a base class from where others inherit</typeparam>
     public class MessagePackFrameWrapper<T> : SyncFrameWrapper<T>
     {
         private SpecialPipeStream pipeStreamReader;
