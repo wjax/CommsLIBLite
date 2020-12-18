@@ -19,6 +19,9 @@ namespace CommsLIBLite.Communications.FrameWrappers.ProtoBuf
         private PrefixStyle _prefixStyle = PrefixStyle.Base128;
         T message;
 
+        #region logger
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        #endregion
 
         public ProtoBuffFrameWrapper(PrefixStyle prefixStyle = PrefixStyle.Base128) : base(false)
         {
@@ -32,9 +35,15 @@ namespace CommsLIBLite.Communications.FrameWrappers.ProtoBuf
             pipeStreamReader.Write(bytes, 0, length);
 
             // Will raise exception if there is a problem with deserialization
-            while ((message = Serializer.DeserializeWithLengthPrefix<T>(pipeStreamReader, _prefixStyle)) != null)
+            try
             {
-                FireEvent(message);
+                while ((message = Serializer.DeserializeWithLengthPrefix<T>(pipeStreamReader, _prefixStyle)) != null)
+                {
+                    FireEvent(message);
+                }
+            } catch (Exception e_parse)
+            {
+                logger.Warn(e_parse, "Incomplete Protobuf message");
             }
             
         }
